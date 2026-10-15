@@ -141,7 +141,11 @@ textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospa
         <div class="frow">
           <div class="field">
             <label>Изображение карточки</label>
-            <label class="filebtn"><input type="file" id="coverFile" accept="image/*">выбрать файл</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:stretch">
+              <label class="filebtn" style="flex:0 0 auto"><input type="file" id="coverFile" accept="image/*">выбрать файл</label>
+              <input type="url" id="coverUrl" placeholder="или вставь ссылку" style="flex:1;min-width:200px">
+              <button type="button" id="coverUrlGo" class="filebtn" style="border-style:solid">применить</button>
+            </div>
             <div class="thumb" id="thumb" hidden><img id="thumbImg" alt=""><button type="button" id="thumbDel">убрать</button></div>
           </div>
           <div class="field">
@@ -208,7 +212,7 @@ function renderMD(src){
     if(/^(-{3,}|\*{3,}|_{3,})$/.test(t)){flush();html+='<hr>';i++;continue;}
     if(/^>/.test(t)){flush();const q=[];while(i<lines.length&&/^>/.test(lines[i].trim())){q.push(lines[i].trim().replace(/^>\s?/,''));i++;}html+='<blockquote>'+q.map(x=>inlineMd(esc(x))).join('<br>')+'</blockquote>';continue;}
     if(/^[-*+]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^[-*+]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^[-*+]\s+/,'')))+'</li>');i++;}html+='<ul>'+its.join('')+'</ul>';continue;}
-    if(/^\d+[.)]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^\d+[.)]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^\d+[.)]\s+/,'')))+'</li>');i++;}html+='<ol>'+its.join('')+'</ol>';continue;}
+    if(/^\d+[.)]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^\d+[.)]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^\d+[.)]\s+/,'')))+'</li>';i++;}html+='<ol>'+its.join('')+'</ol>';continue;}
     if(t===''){flush();i++;continue;}
     para.push(lines[i]);i++;
   }
@@ -267,7 +271,7 @@ $('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')tryPw();});
     $('#connNote').textContent='API: на связи · '+(KEY?'проверка ключа…':'ключ не введён');
     if(KEY)tryPw();
   }catch(e){
-    $('#connNote').textContent='API: нет связи · '+API;
+    $('#connNote').textContent='API: нет связи · '+(API||'текущий домен');
   }
 })();
 
@@ -287,7 +291,10 @@ $('#alist').addEventListener('click',async e=>{
   if(b.dataset.a==='edit'){
     editing=id;
     $('#fTitle').value=it.title;$('#fDate').value=it.date;$('#fBrief').value=it.brief||'';$('#fBody').value=it.body||'';
-    coverData=it.cover||'';renderCoverThumb();atts=(it.atts||[]).map(a=>({...a}));renderAtts();
+    coverData=it.cover||'';
+    $('#coverUrl').value=/^https?:\/\//i.test(coverData)?coverData:'';
+    renderCoverThumb();
+    atts=(it.atts||[]).map(a=>({...a}));renderAtts();
     $('#editMark').textContent='правка: '+it.title;
     $('#saveBtn').textContent='обновить';
   }else{
@@ -303,6 +310,7 @@ $('#fDate').value=today();
 function resetForm(){
   editing=null;coverData='';atts=[];
   $('#aform').reset();$('#fDate').value=today();
+  $('#coverUrl').value='';
   $('#thumb').hidden=true;renderAtts();
   $('#editMark').textContent='новая запись';
   $('#saveBtn').textContent='сохранить';
@@ -311,7 +319,24 @@ function resetForm(){
 function renderCoverThumb(){
   if(coverData){$('#thumbImg').src=absUrl(coverData);$('#thumb').hidden=false;}else $('#thumb').hidden=true;
 }
-$('#thumbDel').onclick=()=>{coverData='';renderCoverThumb();};
+$('#thumbDel').onclick=()=>{coverData='';$('#coverUrl').value='';renderCoverThumb();};
+
+/* ---------- прямая ссылка на обложку ---------- */
+$('#coverUrlGo').onclick=()=>{
+  const v=$('#coverUrl').value.trim();
+  if(!v){toast('вставь ссылку',true);return;}
+  if(!/^https?:\/\//i.test(v) && !v.startsWith('/')){
+    toast('ссылка должна начинаться с http(s):// или /',true);
+    return;
+  }
+  coverData=v;
+  renderCoverThumb();
+  toast('ссылка применена');
+};
+$('#coverUrl').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();$('#coverUrlGo').click();}
+});
+
 function renderAtts(){
   $('#atts').innerHTML=atts.map((a,i)=>{
     const href=a.url?absUrl(a.url):(a.data||'#');
@@ -321,14 +346,16 @@ function renderAtts(){
 }
 $('#atts').addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(!b)return;atts.splice(+b.dataset.i,1);renderAtts();});
 
-/* ---------- обложка ---------- */
+/* ---------- обложка (файл) ---------- */
 $('#coverFile').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
   if(f.size>5e6){toast('изображение больше 5 МБ',true);return;}
   try{
     toast('загрузка…');
     const r=await uploadFile(f,'cover');
-    coverData=r.url;renderCoverThumb();
+    coverData=r.url;
+    $('#coverUrl').value='';
+    renderCoverThumb();
     toast('обложка загружена');
   }catch(err){toast(err.message,true);}
 });
