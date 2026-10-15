@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ОАО МЕГАЛЮЛЬ</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#000;color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+::selection{background:#fff;color:#000}
+a{color:#fff;text-decoration:none;border-bottom:1px solid #333;transition:border-color .15s}
+a:hover{border-color:#fff}
+.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+.wrap{max-width:1280px;margin:0 auto;padding:0 32px}
+
+header{border-bottom:1px solid #1a1a1a;padding:24px 0;position:sticky;top:0;background:#000;z-index:50}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.brand{font-weight:600;letter-spacing:-.01em;font-size:16px}
+.brand small{font-weight:400;color:#777;font-size:12px;margin-left:10px;letter-spacing:.05em}
+nav{display:flex;gap:28px}
+nav a{color:#888;border:none;font-size:14px;letter-spacing:.01em}
+nav a.on,nav a:hover{color:#fff}
+
+main{padding:80px 0 120px}
+section[hidden]{display:none}
+
+h1{font-size:clamp(32px,4vw,48px);font-weight:600;letter-spacing:-.02em;line-height:1.15;margin-bottom:24px}
+h2{font-size:22px;font-weight:600;letter-spacing:-.01em;margin-bottom:40px}
+.lead{max-width:720px;font-size:17px;color:#bbb;line-height:1.7;margin-bottom:24px}
+.lead b{color:#fff;font-weight:500}
+
+.units{display:grid;grid-template-columns:200px 1fr;gap:0;margin-top:56px;border-top:1px solid #1a1a1a}
+.unit{display:contents}
+.unit > div{padding:28px 0;border-bottom:1px solid #1a1a1a}
+.unit .lbl{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:#666;letter-spacing:.08em;text-transform:uppercase}
+.unit h3{font-size:16px;font-weight:500;margin-bottom:10px}
+.unit p{color:#999;font-size:15px;max-width:680px}
+
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:16px}
+.section-head .meta{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:#666;letter-spacing:.08em;text-transform:uppercase}
+.section-head button{background:none;border:1px solid #222;color:#999;padding:6px 14px;font-size:12px;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s}
+.section-head button:hover{border-color:#fff;color:#fff}
+
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.card{background:#000;border:1px solid #1a1a1a;cursor:pointer;display:flex;flex-direction:column;transition:border-color .15s}
+.card:hover{border-color:#444}
+.cimg{position:relative;aspect-ratio:4/3;background:#0a0a0a;overflow:hidden}
+.cimg img{width:100%;height:100%;object-fit:cover;filter:grayscale(.4)}
+.brief{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 14px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;line-height:1.5;color:rgba(255,255,255,.6);background:linear-gradient(to top,rgba(0,0,0,.9),transparent)}
+.cmeta{padding:14px;border-top:1px solid #1a1a1a}
+.cmeta h3{font-size:14px;font-weight:500;line-height:1.4;margin-bottom:4px}
+.cmeta time{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:#666}
+
+.empty{border:1px solid #1a1a1a;padding:60px 24px;text-align:center;color:#666;font-size:14px}
+
+.pager{display:flex;align-items:center;gap:6px;margin-top:32px;flex-wrap:wrap}
+.pager button{background:none;border:1px solid #222;color:#888;padding:6px 12px;font-size:13px;font-family:"JetBrains Mono",ui-monospace,monospace;cursor:pointer;min-width:36px;transition:all .15s}
+.pager button:hover:not(:disabled){border-color:#fff;color:#fff}
+.pager button:disabled{opacity:.3;cursor:default}
+.pager button.cur{border-color:#fff;color:#fff;background:#fff;color:#000}
+.pager .gap{color:#555;padding:0 4px}
+.pginfo{margin-left:auto;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:#666}
+
+/* модалка */
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:60px 24px;overflow-y:auto;background:rgba(0,0,0,.85)}
+.modal[hidden]{display:none}
+.mbox{background:#000;border:1px solid #1a1a1a;max-width:780px;width:100%;position:relative}
+.mclose{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.7);border:1px solid #333;color:#fff;padding:6px 14px;font-size:12px;font-family:"JetBrains Mono",ui-monospace,monospace;cursor:pointer;z-index:2}
+.mcover{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;border-bottom:1px solid #1a1a1a;filter:grayscale(.3)}
+.mhead{padding:32px 40px 0}
+.mhead time{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:#888;letter-spacing:.05em}
+.mhead h2{font-size:28px;font-weight:600;margin-top:12px;line-height:1.25;letter-spacing:-.01em}
+.mbody{padding:28px 40px 40px}
+
+.md p{margin:0 0 16px;color:#bbb;font-size:15px;line-height:1.7}
+.md h1,.md h2,.md h3,.md h4{color:#fff;margin:28px 0 14px;line-height:1.3;font-weight:600}
+.md h1{font-size:22px}.md h2{font-size:18px}.md h3{font-size:15px}
+.md ul,.md ol{margin:0 0 16px 24px;color:#bbb}
+.md li{margin-bottom:6px}
+.md code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;background:#0a0a0a;border:1px solid #1a1a1a;padding:2px 6px;color:#fff}
+.md pre{background:#0a0a0a;border:1px solid #1a1a1a;padding:18px;margin:0 0 16px;overflow-x:auto}
+.md pre code{background:none;border:none;padding:0;display:block;line-height:1.6;color:#ccc}
+.md blockquote{border-left:2px solid #444;padding:4px 0 4px 20px;margin:0 0 16px;color:#888;font-style:italic}
+.md hr{border:none;border-top:1px solid #1a1a1a;margin:24px 0}
+.md a{border-bottom-color:#666}
+.mdimg{max-width:100%;border:1px solid #1a1a1a;margin:8px 0}
+.md del{color:#666}
+.mfiles{padding:0 40px 40px}
+.mfiles .flabel{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:#666;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+.fchip{display:inline-flex;gap:10px;align-items:center;border:1px solid #222;padding:8px 14px;margin:0 8px 8px 0;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:#fff}
+.fchip:hover{border-color:#fff}
+.fchip small{color:#777}
+.attimg{border:1px solid #1a1a1a;margin-bottom:14px}
+.attimg img{width:100%;display:block}
+.attimg figcaption{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:#888;padding:10px 14px;border-top:1px solid #1a1a1a}
+
+footer{border-top:1px solid #1a1a1a;padding:28px 0;color:#555;font-size:12px}
+.frow{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+@media(max-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:720px){.grid{grid-template-columns:repeat(2,1fr)}.units{grid-template-columns:1fr}.unit > div.lbl{padding-bottom:0;border-bottom:none}.mhead,.mbody,.mfiles{padding-left:24px;padding-right:24px}}
+@media(max-width:480px){.grid{grid-template-columns:1fr}nav{gap:18px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hrow">
+    <div class="brand">ОАО «МЕГАЛЮЛЬ»<small class="mono">сквад · 2026</small></div>
+    <nav>
+      <a href="#" data-t="about" class="on">О нас</a>
+      <a href="#" data-t="ops">Достижения</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="tab-about">
+  <h1>Сквад разработчиков, блэкхэт-хакеров и осинтеров.</h1>
+  <p class="lead">Мы занимаемся тем, что мешает жить доксерам, школо-ратерам и прочим дегенератам. Без галочек и публичных отчётов. Только результат.</p>
+
+  <div class="units">
+    <div class="unit">
+      <div class="lbl">Блэкхэт</div>
+      <div>
+        <h3>Поиск уязвимостей и их эксплуатация</h3>
+        <p>Ищут дыры в сайтах и эксплуатируют их сразу. Без «ответственного разглашения» для тех, кто его не заслужил.</p>
+      </div>
+    </div>
+    <div class="unit">
+      <div class="lbl">Разработка</div>
+      <div>
+        <h3>Собственные скрипты и боты</h3>
+        <p>Пишут инструменты для быстрой выгрузки данных и рабочие панели. Всё затачивается под задачи сквада.</p>
+      </div>
+    </div>
+    <div class="unit">
+      <div class="lbl">Осинт</div>
+      <div>
+        <h3>Разведка по открытым источникам</h3>
+        <p>Цепляются за любую зацепку: ник, фото, домен, опечатку. Раскручивают цепочку до конца — находят даже родственников цели.</p>
+      </div>
+    </div>
+    <div class="unit">
+      <div class="lbl">Остальные</div>
+      <div>
+        <h3>Аналитика и обеспечение</h3>
+        <p>Держат работу в строю: связь, анализ, документирование, распределение результатов.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-ops" hidden>
+  <div class="section-head">
+    <h2 style="margin:0">Достижения</h2>
+    <div class="meta">записей: <span id="opsCount">0</span> · <button id="refreshBtn">обновить</button></div>
+  </div>
+  <div id="loadBox" class="empty">загрузка…</div>
+  <div class="grid" id="grid"></div>
+  <div class="pager" id="pager"></div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap frow">
+    <span>ОАО «МЕГАЛЮЛЬ» · сквад · 2026</span>
+    <span>против доксеров, ратеров и прочих дегенератов</span>
+  </div>
+</footer>
+
+<div class="modal" id="modal" hidden>
+  <div class="mbox">
+    <button class="mclose" id="mclose">закрыть</button>
+    <img class="mcover" id="mCover" alt="">
+    <div class="mhead"><time id="mDate"></time><h2 id="mTitle"></h2></div>
+    <div class="mbody md" id="mBody"></div>
+    <div class="mfiles" id="mFiles"></div>
+  </div>
+</div>
+
+<script>
+const API='http://d2.minely.net:25570';
+const PAGE_SIZE=30;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt=d=>{if(!d)return'—';const p=d.split('-');return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:d};
+const fmtSize=b=>b<1024?b+' Б':b<1048576?(b/1024).toFixed(0)+' КБ':(b/1048576).toFixed(1)+' МБ';
+
+function ph(label){
+  const ch=(label||'М').replace(/[«»"']/g,'').trim().charAt(0).toUpperCase()||'М';
+  return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(
+    `<svg xmlns='http://www.w3.org/2000/svg' width='640' height='480'><rect width='640' height='480' fill='#0a0a0a'/><text x='320' y='270' font-family='monospace' font-size='180' fill='#1a1a1a' text-anchor='middle'>${ch}</text></svg>`
+  );
+}
+document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&!t.dataset.ph){t.dataset.ph=1;t.src=ph('');}},true);
+
+/* markdown */
+function inlineMd(s){
+  s=s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,'<img class="mdimg" alt="$1" src="$2">');
+  s=s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/\*([^*\n]+)\*/g,'<em>$1</em>');
+  s=s.replace(/~~([^~]+)~~/g,'<del>$1</del>');
+  return s;
+}
+function renderMD(src){
+  if(!src)return'';
+  const blocks=[];
+  src=String(src).replace(/```[^\n]*\n([\s\S]*?)```/g,(m,c)=>{blocks.push(c.replace(/\n$/,''));return'\u0000B'+(blocks.length-1)+'\u0000';});
+  const lines=src.split(/\r?\n/);
+  let html='',i=0;const para=[];
+  const flush=()=>{if(para.length){html+='<p>'+para.map(l=>inlineMd(esc(l))).join('<br>')+'</p>';para.length=0;}};
+  while(i<lines.length){
+    const t=lines[i].trim();
+    if(/^\u0000B\d+\u0000$/.test(t)){flush();html+=t;i++;continue;}
+    if(/^#{1,6}\s/.test(t)){flush();const n=t.match(/^#+/)[0].length;html+=`<h${n}>`+inlineMd(esc(t.replace(/^#+\s*/,'')))+`</h${n}>`;i++;continue;}
+    if(/^(-{3,}|\*{3,}|_{3,})$/.test(t)){flush();html+='<hr>';i++;continue;}
+    if(/^>/.test(t)){flush();const q=[];while(i<lines.length&&/^>/.test(lines[i].trim())){q.push(lines[i].trim().replace(/^>\s?/,''));i++;}html+='<blockquote>'+q.map(x=>inlineMd(esc(x))).join('<br>')+'</blockquote>';continue;}
+    if(/^[-*+]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^[-*+]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^[-*+]\s+/,'')))+'</li>');i++;}html+='<ul>'+its.join('')+'</ul>';continue;}
+    if(/^\d+[.)]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^\d+[.)]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^\d+[.)]\s+/,'')))+'</li>');i++;}html+='<ol>'+its.join('')+'</ol>';continue;}
+    if(t===''){flush();i++;continue;}
+    para.push(lines[i]);i++;
+  }
+  flush();
+  return html.replace(/\u0000B(\d+)\u0000/g,(m,n)=>'<pre><code>'+esc(blocks[+n])+'</code></pre>');
+}
+
+/* данные */
+let ITEMS=[],loaded=false,page=1;
+async function fetchItems(){
+  const r=await fetch(API+'/api/items');
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  ITEMS=(await r.json()).items||[];
+  loaded=true;
+}
+async function ensureOps(force){
+  if(loaded&&!force){renderOps();return;}
+  const lb=$('#loadBox');lb.hidden=false;lb.innerHTML='загрузка…';$('#grid').innerHTML='';$('#pager').innerHTML='';
+  try{await fetchItems();lb.hidden=true;renderOps();}
+  catch(e){lb.innerHTML=`нет связи с API.<br><small style="color:#555">${esc(String(e.message||e))}</small><br><br><button id="retryBtn" style="background:none;border:1px solid #333;color:#fff;padding:8px 16px;font-size:13px;cursor:pointer">повторить</button>`;$('#retryBtn').onclick=()=>ensureOps(true);}
+}
+
+/* роутер */
+const tabs={about:$('#tab-about'),ops:$('#tab-ops')};
+function go(name){
+  if(!tabs[name])name='about';
+  $$('nav a').forEach(a=>a.classList.toggle('on',a.dataset.t===name));
+  Object.entries(tabs).forEach(([k,el])=>el.hidden=k!==name);
+  if(name==='ops')ensureOps();
+  window.scrollTo({top:0});
+}
+document.addEventListener('click',e=>{const b=e.target.closest('a[data-t]');if(b){e.preventDefault();go(b.dataset.t);}});
+$('#refreshBtn').onclick=()=>ensureOps(true);
+
+/* рендер */
+function cardHtml(it,gi){
+  return `<article class="card" data-id="${it.id}">
+    <div class="cimg"><img src="${esc(it.cover||ph(it.title))}" alt="" loading="lazy"><p class="brief">${esc(it.brief||'')}</p></div>
+    <div class="cmeta"><h3>${esc(it.title)}</h3><time>${fmt(it.date)}</time></div>
+  </article>`;
+}
+function renderOps(){
+  const total=ITEMS.length,pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  if(page>pages)page=pages;
+  const slice=ITEMS.slice((page-1)*PAGE_SIZE,page*PAGE_SIZE);
+  $('#grid').innerHTML=slice.map((it,i)=>cardHtml(it,(page-1)*PAGE_SIZE+i)).join('')
+    ||'<div class="empty" style="grid-column:1/-1">пока пусто.</div>';
+  $('#opsCount').textContent=total;
+  renderPager(pages,total,slice.length);
+}
+function renderPager(pages,total,shown){
+  const p=$('#pager');
+  if(!total){p.innerHTML='';return;}
+  if(pages<=1){p.innerHTML=`<span class="pginfo">1 / 1 · ${shown} из ${total}</span>`;return;}
+  const nums=[];for(let i=1;i<=pages;i++){if(pages<=9||i===1||i===pages||Math.abs(i-page)<=1)nums.push(i);else if(nums[nums.length-1]!=='…')nums.push('…');}
+  let h=`<button data-p="${page-1}" ${page===1?'disabled':''}>‹</button>`;
+  nums.forEach(n=>{h+=n==='…'?`<span class="gap">…</span>`:`<button data-p="${n}" class="${n===page?'cur':''}">${n}</button>`;});
+  h+=`<button data-p="${page+1}" ${page===pages?'disabled':''}>›</button>`;
+  h+=`<span class="pginfo">${(page-1)*PAGE_SIZE+1}–${(page-1)*PAGE_SIZE+shown} из ${total}</span>`;
+  p.innerHTML=h;
+}
+$('#pager').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b||b.disabled)return;page=+b.dataset.p;renderOps();window.scrollTo({top:0});});
+$('#grid').addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;const it=ITEMS.find(x=>x.id===c.dataset.id);if(it)openModal(it);});
+
+/* модалка */
+function openModal(it){
+  $('#mCover').src=it.cover||ph(it.title);
+  $('#mDate').textContent=fmt(it.date);
+  $('#mTitle').textContent=it.title;
+  $('#mBody').innerHTML=renderMD(it.body)||'<p style="color:#666">описания нет</p>';
+  const atts=it.atts||[];let fh='';
+  if(atts.length){
+    fh='<p class="flabel">вложения</p>';
+    atts.forEach(a=>{
+      if((a.type||'').startsWith('image/'))fh+=`<figure class="attimg"><img src="${a.data}" alt=""><figcaption>${esc(a.name)} · ${fmtSize(a.size||0)}</figcaption></figure>`;
+      else fh+=`<a class="fchip" href="${a.data}" download="${esc(a.name)}">↓ ${esc(a.name)} <small>${fmtSize(a.size||0)}</small></a>`;
+    });
+  }
+  $('#mFiles').innerHTML=fh;
+  $('#modal').hidden=false;
+  document.body.style.overflow='hidden';
+}
+function closeModal(){$('#modal').hidden=true;document.body.style.overflow='';}
+$('#mclose').onclick=closeModal;
+$('#modal').addEventListener('click',e=>{if(e.target===$('#modal'))closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+go('about');
+</script>
+</body>
+</html>

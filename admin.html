@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Админка — ОАО МЕГАЛЮЛЬ</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#000;color:#e5e5e5;font-family:-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+::selection{background:#fff;color:#000}
+a{color:#fff;text-decoration:none;border-bottom:1px solid #333}
+a:hover{border-color:#fff}
+.wrap{max-width:1200px;margin:0 auto;padding:0 32px}
+
+header{border-bottom:1px solid #1a1a1a;padding:24px 0;position:sticky;top:0;background:#000;z-index:50}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.brand{font-weight:600;font-size:16px}
+.brand small{font-weight:400;color:#777;font-size:12px;margin-left:10px;letter-spacing:.05em;font-family:"JetBrains Mono",ui-monospace,monospace}
+.back{color:#888;border:none;font-size:14px}
+.back:hover{color:#fff}
+
+main{padding:60px 0 120px}
+h1{font-size:28px;font-weight:600;letter-spacing:-.01em;margin-bottom:16px}
+.meta{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:#666;letter-spacing:.08em;text-transform:uppercase;margin-bottom:40px}
+
+.gate{max-width:420px;border:1px solid #1a1a1a;padding:40px}
+.gate p.tag{color:#888;font-size:14px;margin-bottom:24px;line-height:1.6}
+.gate .tag code{background:#0a0a0a;border:1px solid #1a1a1a;padding:2px 6px;color:#fff;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px}
+.gate-row{display:flex;gap:10px}
+.gate input{flex:1;background:#0a0a0a;border:1px solid #222;color:#fff;padding:10px 14px;font-size:14px;font-family:inherit;outline:none}
+.gate input:focus{border-color:#fff}
+.gate button{background:#fff;color:#000;border:none;padding:10px 22px;font-size:14px;font-family:inherit;cursor:pointer}
+.gate button:hover{background:#ddd}
+.gate .err{margin-top:16px;font-size:13px;color:#ff6b6b;display:none}
+.gate .err.on{display:block}
+
+.adm-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:48px;align-items:start}
+.field{margin-bottom:20px}
+.field label{display:block;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#888;margin-bottom:8px}
+.field .hint{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:#555;margin-top:8px;line-height:1.6}
+.frow{display:grid;grid-template-columns:1fr 200px;gap:14px}
+input,textarea{background:#0a0a0a;border:1px solid #222;color:#fff;padding:10px 14px;font-size:14px;font-family:inherit;width:100%;outline:none;transition:border-color .15s}
+input:focus,textarea:focus{border-color:#fff}
+textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px}
+.filebtn{display:inline-block;border:1px dashed #333;padding:10px 16px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:#888;cursor:pointer}
+.filebtn:hover{border-color:#fff;color:#fff}
+.filebtn input{display:none}
+.thumb{margin-top:12px;position:relative;max-width:240px}
+.thumb img{width:100%;border:1px solid #1a1a1a;display:block}
+.thumb button{position:absolute;top:8px;right:8px;background:#000;border:1px solid #333;color:#fff;padding:4px 10px;font-size:11px;font-family:"JetBrains Mono",ui-monospace,monospace;cursor:pointer}
+.atts{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.achip{display:inline-flex;gap:10px;align-items:center;border:1px solid #222;padding:6px 12px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px}
+.achip b{cursor:pointer;color:#888;font-weight:400}
+.achip b:hover{color:#ff6b6b}
+.formbtns{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
+.formbtns button{background:none;border:1px solid #333;color:#fff;padding:8px 18px;font-size:13px;font-family:inherit;cursor:pointer;transition:all .15s}
+.formbtns button:hover{border-color:#fff}
+.formbtns .primary{background:#fff;color:#000;border-color:#fff}
+.formbtns .primary:hover{background:#ddd;border-color:#ddd}
+.formbtns button:disabled{opacity:.4;cursor:default}
+.editmark{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:#888;margin-bottom:18px;letter-spacing:.05em}
+.prev{margin-top:24px;border:1px solid #1a1a1a;padding:24px}
+.prev[hidden]{display:none}
+.prev .plabel{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#888;margin-bottom:16px}
+
+.alist{border:1px solid #1a1a1a;max-height:600px;overflow-y:auto}
+.arow{display:grid;grid-template-columns:82px 1fr auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid #1a1a1a;font-size:14px}
+.arow:last-child{border-bottom:none}
+.arow time{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:#888}
+.arow .at{color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arow button{background:none;border:1px solid #222;color:#888;padding:4px 10px;font-size:11px;font-family:"JetBrains Mono",ui-monospace,monospace;cursor:pointer}
+.arow button:hover{border-color:#fff;color:#fff}
+.arow button.red:hover{border-color:#ff6b6b;color:#ff6b6b}
+.atools{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.atools button{background:none;border:1px solid #222;color:#888;padding:6px 14px;font-size:12px;font-family:"JetBrains Mono",ui-monospace,monospace;cursor:pointer}
+.atools button:hover{border-color:#fff;color:#fff}
+.anote{margin-top:16px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;color:#555;line-height:1.7}
+
+.md p{margin:0 0 14px;color:#ccc;font-size:14px;line-height:1.6}
+.md h1,.md h2,.md h3,.md h4{color:#fff;margin:22px 0 12px;line-height:1.3;font-weight:600}
+.md h1{font-size:20px}.md h2{font-size:17px}.md h3{font-size:14px}
+.md ul,.md ol{margin:0 0 14px 22px;color:#ccc}
+.md li{margin-bottom:4px}
+.md code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;background:#0a0a0a;border:1px solid #1a1a1a;padding:2px 6px;color:#fff}
+.md pre{background:#0a0a0a;border:1px solid #1a1a1a;padding:16px;margin:0 0 14px;overflow-x:auto}
+.md pre code{background:none;border:none;padding:0;display:block;line-height:1.6;color:#ccc}
+.md blockquote{border-left:2px solid #444;padding:4px 0 4px 18px;margin:0 0 14px;color:#888;font-style:italic}
+.md hr{border:none;border-top:1px solid #1a1a1a;margin:20px 0}
+.md a{border-bottom-color:#666}
+.md del{color:#666}
+
+#toast{position:fixed;left:24px;bottom:24px;background:#fff;color:#000;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;padding:10px 18px;opacity:0;transform:translateY(12px);transition:opacity .2s,transform .2s;pointer-events:none;z-index:200}
+#toast.show{opacity:1;transform:none}
+#toast.bad{background:#ff6b6b;color:#fff}
+
+@media(max-width:1000px){.adm-grid{grid-template-columns:1fr}}
+@media(max-width:480px){.frow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hrow">
+    <div class="brand">ОАО «МЕГАЛЮЛЬ»<small>админка</small></div>
+    <a class="back" href="index.html">← на сайт</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>Панель управления</h1>
+  <div class="meta" id="connNote">соединение: проверка…</div>
+
+  <div class="gate" id="gate">
+    <p class="tag">доступ только для состава сквада.<br>ключ проверяется на стороне воркера через заголовок <code>X-Admin-Key</code></p>
+    <div class="gate-row">
+      <input type="password" id="pw" placeholder="ключ доступа" autocomplete="off">
+      <button id="pwGo">войти</button>
+    </div>
+    <p class="err" id="pwErr">неверный ключ или нет связи с API</p>
+  </div>
+
+  <div id="adminPanel" hidden>
+    <div class="adm-grid">
+      <form id="aform" autocomplete="off">
+        <p class="editmark" id="editMark">новая запись</p>
+        <div class="field"><label>Заголовок</label><input id="fTitle" maxlength="120" placeholder="Операция «...»"></div>
+        <div class="frow">
+          <div class="field"><label>Краткое описание (на карточке)</label><textarea id="fBrief" rows="2" maxlength="200" placeholder="одна-две строки"></textarea></div>
+          <div class="field"><label>Дата</label><input type="date" id="fDate"></div>
+        </div>
+        <div class="field">
+          <label>Полное описание · markdown</label>
+          <textarea id="fBody" rows="10" placeholder="## заголовок&#10;текст, **жирный**, `код`&#10;- списки&#10;> цитаты&#10;```&#10;блоки кода&#10;```"></textarea>
+          <p class="hint"># ## ### · **жирный** · *курсив* · ~~зачёркнутый~~ · `код` · ```блоки``` · - списки · 1. нумерация · > цитаты · [ссылки](…)</p>
+        </div>
+        <div class="frow">
+          <div class="field">
+            <label>Изображение карточки</label>
+            <label class="filebtn"><input type="file" id="coverFile" accept="image/*">выбрать файл</label>
+            <div class="thumb" id="thumb" hidden><img id="thumbImg" alt=""><button type="button" id="thumbDel">убрать</button></div>
+          </div>
+          <div class="field">
+            <label>Вложения (до 5, по 900 КБ)</label>
+            <label class="filebtn"><input type="file" id="attFile" multiple>добавить</label>
+            <div class="atts" id="atts"></div>
+          </div>
+        </div>
+        <div class="formbtns">
+          <button type="submit" class="primary" id="saveBtn">сохранить</button>
+          <button type="button" id="prevBtn">предпросмотр</button>
+          <button type="button" id="clearBtn">очистить</button>
+        </div>
+        <div class="prev md" id="prev" hidden><p class="plabel">предпросмотр</p><div id="prevBody"></div></div>
+      </form>
+
+      <div>
+        <div class="alist" id="alist"></div>
+        <div class="atools">
+          <button id="expBtn">экспорт json</button>
+          <button id="impBtn">импорт json</button>
+          <input type="file" id="impFile" accept="application/json" hidden>
+        </div>
+        <p class="anote">база: Cloudflare KV. каждая запись — отдельный ключ.<br>импорт полностью заменяет базу. лимит записи ≈ 22 МБ.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script>
+const API='http://d2.minely.net:25570';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt=d=>{if(!d)return'—';const p=d.split('-');return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:d};
+const fmtSize=b=>b<1024?b+' Б':b<1048576?(b/1024).toFixed(0)+' КБ':(b/1048576).toFixed(1)+' МБ';
+const today=()=>new Date().toISOString().slice(0,10);
+
+let tt;
+function toast(msg,bad){const t=$('#toast');t.textContent='» '+msg;t.classList.toggle('bad',!!bad);t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400);}
+
+function inlineMd(s){
+  s=s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,'<img alt="$1" src="$2" style="max-width:100%;border:1px solid #1a1a1a">');
+  s=s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  s=s.replace(/\*([^*\n]+)\*/g,'<em>$1</em>');
+  s=s.replace(/~~([^~]+)~~/g,'<del>$1</del>');
+  return s;
+}
+function renderMD(src){
+  if(!src)return'';
+  const blocks=[];
+  src=String(src).replace(/```[^\n]*\n([\s\S]*?)```/g,(m,c)=>{blocks.push(c.replace(/\n$/,''));return'\u0000B'+(blocks.length-1)+'\u0000';});
+  const lines=src.split(/\r?\n/);
+  let html='',i=0;const para=[];
+  const flush=()=>{if(para.length){html+='<p>'+para.map(l=>inlineMd(esc(l))).join('<br>')+'</p>';para.length=0;}};
+  while(i<lines.length){
+    const t=lines[i].trim();
+    if(/^\u0000B\d+\u0000$/.test(t)){flush();html+=t;i++;continue;}
+    if(/^#{1,6}\s/.test(t)){flush();const n=t.match(/^#+/)[0].length;html+=`<h${n}>`+inlineMd(esc(t.replace(/^#+\s*/,'')))+`</h${n}>`;i++;continue;}
+    if(/^(-{3,}|\*{3,}|_{3,})$/.test(t)){flush();html+='<hr>';i++;continue;}
+    if(/^>/.test(t)){flush();const q=[];while(i<lines.length&&/^>/.test(lines[i].trim())){q.push(lines[i].trim().replace(/^>\s?/,''));i++;}html+='<blockquote>'+q.map(x=>inlineMd(esc(x))).join('<br>')+'</blockquote>';continue;}
+    if(/^[-*+]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^[-*+]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^[-*+]\s+/,'')))+'</li>');i++;}html+='<ul>'+its.join('')+'</ul>';continue;}
+    if(/^\d+[.)]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^\d+[.)]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^\d+[.)]\s+/,'')))+'</li>');i++;}html+='<ol>'+its.join('')+'</ol>';continue;}
+    if(t===''){flush();i++;continue;}
+    para.push(lines[i]);i++;
+  }
+  flush();
+  return html.replace(/\u0000B(\d+)\u0000/g,(m,n)=>'<pre><code>'+esc(blocks[+n])+'</code></pre>');
+}
+
+let KEY=sessionStorage.getItem('mlk')||'';
+async function api(path,{method='GET',body}={}){
+  const r=await fetch(API+path,{
+    method,
+    headers:{'Content-Type':'application/json','X-Admin-Key':KEY},
+    body:body?JSON.stringify(body):undefined,
+  });
+  let j={};try{j=await r.json();}catch(e){}
+  if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+  return j;
+}
+
+async function tryPw(){
+  const v=$('#pw').value.trim();if(!v)return;
+  KEY=v;
+  try{
+    await api('/api/ping');
+    sessionStorage.setItem('mlk',KEY);
+    $('#gate').hidden=true;$('#adminPanel').hidden=false;
+    $('#connNote').textContent='соединение: установлено · ключ подтверждён';
+    $('#pw').value='';$('#pwErr').classList.remove('on');
+    await refreshList();
+  }catch(e){
+    KEY='';
+    $('#pwErr').classList.add('on');
+    toast(e.message,true);
+  }
+}
+$('#pwGo').onclick=tryPw;
+$('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')tryPw();});
+
+(async()=>{
+  try{
+    await fetch(API+'/api/items');
+    $('#connNote').textContent='API: на связи · '+(KEY?'проверка ключа…':'ключ не введён');
+    if(KEY)tryPw();
+  }catch(e){
+    $('#connNote').textContent='API: нет связи · '+API;
+  }
+})();
+
+let ITEMS=[];
+async function refreshList(){
+  try{ITEMS=(await api('/api/items')).items||[];}
+  catch(e){toast('ошибка загрузки: '+e.message,true);return;}
+  $('#alist').innerHTML=ITEMS.map(it=>`<div class="arow" data-id="${it.id}">
+    <time>${fmt(it.date)}</time><span class="at">${esc(it.title)}</span>
+    <span><button data-a="edit">правка</button> <button data-a="del" class="red">удалить</button></span>
+  </div>`).join('')||'<p style="padding:18px;color:#666;font-family:JetBrains Mono,monospace;font-size:12px">база пуста</p>';
+}
+$('#alist').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const id=b.closest('.arow').dataset.id;
+  const it=ITEMS.find(x=>x.id===id);if(!it)return;
+  if(b.dataset.a==='edit'){
+    editing=id;
+    $('#fTitle').value=it.title;$('#fDate').value=it.date;$('#fBrief').value=it.brief||'';$('#fBody').value=it.body||'';
+    coverData=it.cover||'';renderCoverThumb();atts=(it.atts||[]).map(a=>({...a}));renderAtts();
+    $('#editMark').textContent='правка: '+it.title;
+    $('#saveBtn').textContent='обновить';
+  }else{
+    if(!confirm(`удалить «${it.title}»?`))return;
+    try{await api('/api/items/'+id,{method:'DELETE'});toast('удалено');await refreshList();if(editing===id)resetForm();}
+    catch(err){toast(err.message,true);}
+  }
+});
+
+let editing=null,coverData='',atts=[];
+$('#fDate').value=today();
+
+function resetForm(){
+  editing=null;coverData='';atts=[];
+  $('#aform').reset();$('#fDate').value=today();
+  $('#thumb').hidden=true;renderAtts();
+  $('#editMark').textContent='новая запись';
+  $('#saveBtn').textContent='сохранить';
+  $('#prev').hidden=true;
+}
+function renderCoverThumb(){
+  if(coverData){$('#thumbImg').src=coverData;$('#thumb').hidden=false;}else $('#thumb').hidden=true;
+}
+$('#thumbDel').onclick=()=>{coverData='';renderCoverThumb();};
+function renderAtts(){
+  $('#atts').innerHTML=atts.map((a,i)=>`<span class="achip">${esc(a.name)} <small style="color:#777">${fmtSize(a.size||0)}</small><b data-i="${i}">✕</b></span>`).join('');
+}
+$('#atts').addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(!b)return;atts.splice(+b.dataset.i,1);renderAtts();});
+
+function downscale(file,maxW,cb){
+  const img=new Image(),url=URL.createObjectURL(file);
+  img.onload=()=>{const c=document.createElement('canvas');const k=Math.min(1,maxW/img.width);c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.82));URL.revokeObjectURL(url);};
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('не удалось прочитать файл',true);};
+  img.src=url;
+}
+$('#coverFile').addEventListener('change',e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(f.size>3e6){toast('изображение больше 3 МБ',true);return;}
+  downscale(f,1000,d=>{coverData=d;renderCoverThumb();});
+});
+$('#attFile').addEventListener('change',e=>{
+  for(const f of e.target.files){
+    if(atts.length>=5){toast('максимум 5 вложений',true);break;}
+    if(f.size>921600){toast(`«${f.name}» больше 900 КБ`,true);continue;}
+    const r=new FileReader();
+    r.onload=()=>{atts.push({name:f.name,type:f.type||'application/octet-stream',data:r.result,size:f.size});renderAtts();};
+    r.readAsDataURL(f);
+  }
+  e.target.value='';
+});
+
+$('#aform').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const title=$('#fTitle').value.trim();
+  if(!title){toast('нужен заголовок',true);$('#fTitle').focus();return;}
+  const item={title,date:$('#fDate').value||today(),brief:$('#fBrief').value.trim(),body:$('#fBody').value,cover:coverData,atts};
+  const wasEdit=!!editing;
+  const btn=$('#saveBtn');btn.disabled=true;btn.textContent='отправка…';
+  try{
+    if(wasEdit)await api('/api/items/'+editing,{method:'PUT',body:item});
+    else await api('/api/items',{method:'POST',body:item});
+    toast(wasEdit?'обновлено':'добавлено');
+    resetForm();await refreshList();
+  }catch(err){toast(err.message,true);}
+  btn.disabled=false;btn.textContent=wasEdit?'обновить':'сохранить';
+});
+$('#clearBtn').onclick=resetForm;
+
+$('#prevBtn').onclick=()=>{
+  const p=$('#prev');p.hidden=!p.hidden;
+  if(!p.hidden)$('#prevBody').innerHTML=renderMD($('#fBody').value)||'<p style="color:#666">пусто</p>';
+};
+$('#fBody').addEventListener('input',()=>{if(!$('#prev').hidden)$('#prevBody').innerHTML=renderMD($('#fBody').value);});
+
+$('#expBtn').onclick=async()=>{
+  try{
+    const j=await api('/api/items');
+    const b=new Blob([JSON.stringify(j.items,null,1)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='megalul.json';a.click();
+    toast('экспортировано');
+  }catch(e){toast(e.message,true);}
+};
+$('#impBtn').onclick=()=>$('#impFile').click();
+$('#impFile').addEventListener('change',e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  const r=new FileReader();
+  r.onload=async()=>{
+    let arr;
+    try{arr=JSON.parse(r.result);if(!Array.isArray(arr))throw 0;}
+    catch(err){toast('битый json',true);return;}
+    if(!confirm(`импортировать ${arr.length} записей? текущая база будет полностью заменена.`))return;
+    try{
+      const res=await api('/api/import',{method:'POST',body:arr});
+      toast(`импортировано: ${res.imported}${res.skipped?', пропущено: '+res.skipped:''}`);
+      await refreshList();resetForm();
+    }catch(err){toast(err.message,true);}
+  };
+  r.readAsText(f);
+});
+</script>
+</body>
+</html>
