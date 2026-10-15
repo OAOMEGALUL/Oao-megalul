@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "http://d2.minely.net:25570/api/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "http://d2.minely.net:25570/uploads/:path*"
+    }
+  ]
+}
