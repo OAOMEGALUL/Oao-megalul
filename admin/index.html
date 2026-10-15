@@ -113,7 +113,7 @@ textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospa
   <div class="meta" id="connNote">соединение: проверка…</div>
 
   <div class="gate" id="gate">
-    <p class="tag">доступ только для состава сквада.<br>ключ проверяется на стороне воркера через заголовок <code>X-Admin-Key</code></p>
+    <p class="tag">доступ только для состава сквада.<br>ключ проверяется через заголовок <code>X-Admin-Key</code></p>
     <div class="gate-row">
       <input type="password" id="pw" placeholder="ключ доступа" autocomplete="off">
       <button id="pwGo">войти</button>
@@ -178,269 +178,397 @@ textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospa
 <div id="toast"></div>
 
 <script>
-const API='';
-const $=s=>document.querySelector(s);
-const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const fmt=d=>{if(!d)return'—';const p=d.split('-');return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:d};
-const fmtSize=b=>b<1024?b+' Б':b<1048576?(b/1024).toFixed(0)+' КБ':(b/1048576).toFixed(1)+' МБ';
-const today=()=>new Date().toISOString().slice(0,10);
-const absUrl=u=>!u?'':(/^https?:\/\//i.test(u)?u:API+u);
+var API = '';
+function $(s){ return document.querySelector(s); }
+function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(d){ if(!d) return '-'; var p = d.split('-'); return p.length === 3 ? (p[2] + '.' + p[1] + '.' + p[0]) : d; }
+function fmtSize(b){ if(b < 1024) return b + ' B'; if(b < 1048576) return (b/1024).toFixed(0) + ' KB'; return (b/1048576).toFixed(1) + ' MB'; }
+function today(){ return new Date().toISOString().slice(0,10); }
+function absUrl(u){ if(!u) return ''; return /^https?:\/\//i.test(u) ? u : (API + u); }
 
-let tt;
-function toast(msg,bad){const t=$('#toast');t.textContent='» '+msg;t.classList.toggle('bad',!!bad);t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400);}
+var tt;
+function toast(msg, bad){
+  var t = $('#toast');
+  t.textContent = '> ' + msg;
+  t.classList.toggle('bad', !!bad);
+  t.classList.add('show');
+  clearTimeout(tt);
+  tt = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+}
 
 function inlineMd(s){
-  s=s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,'<img alt="$1" src="$2" style="max-width:100%;border:1px solid #1a1a1a">');
-  s=s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-  s=s.replace(/`([^`]+)`/g,'<code>$1</code>');
-  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
-  s=s.replace(/\*([^*\n]+)\*/g,'<em>$1</em>');
-  s=s.replace(/~~([^~]+)~~/g,'<del>$1</del>');
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%;border:1px solid #1a1a1a">');
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\*([^*\n]+)\*/g, '<em>$1</em>');
+  s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>');
   return s;
 }
+
 function renderMD(src){
-  if(!src)return'';
-  const blocks=[];
-  src=String(src).replace(/```[^\n]*\n([\s\S]*?)```/g,(m,c)=>{blocks.push(c.replace(/\n$/,''));return'\u0000B'+(blocks.length-1)+'\u0000';});
-  const lines=src.split(/\r?\n/);
-  let html='',i=0;const para=[];
-  const flush=()=>{if(para.length){html+='<p>'+para.map(l=>inlineMd(esc(l))).join('<br>')+'</p>';para.length=0;}};
-  while(i<lines.length){
-    const t=lines[i].trim();
-    if(/^\u0000B\d+\u0000$/.test(t)){flush();html+=t;i++;continue;}
-    if(/^#{1,6}\s/.test(t)){flush();const n=t.match(/^#+/)[0].length;html+=`<h${n}>`+inlineMd(esc(t.replace(/^#+\s*/,'')))+`</h${n}>`;i++;continue;}
-    if(/^(-{3,}|\*{3,}|_{3,})$/.test(t)){flush();html+='<hr>';i++;continue;}
-    if(/^>/.test(t)){flush();const q=[];while(i<lines.length&&/^>/.test(lines[i].trim())){q.push(lines[i].trim().replace(/^>\s?/,''));i++;}html+='<blockquote>'+q.map(x=>inlineMd(esc(x))).join('<br>')+'</blockquote>';continue;}
-    if(/^[-*+]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^[-*+]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^[-*+]\s+/,'')))+'</li>');i++;}html+='<ul>'+its.join('')+'</ul>';continue;}
-    if(/^\d+[.)]\s+/.test(t)){flush();const its=[];while(i<lines.length&&/^\d+[.)]\s+/.test(lines[i].trim())){its.push('<li>'+inlineMd(esc(lines[i].trim().replace(/^\d+[.)]\s+/,'')))+'</li>';i++;}html+='<ol>'+its.join('')+'</ol>';continue;}
-    if(t===''){flush();i++;continue;}
-    para.push(lines[i]);i++;
+  if(!src) return '';
+  var blocks = [];
+  src = String(src).replace(/```[^\n]*\n([\s\S]*?)```/g, function(m, c){
+    blocks.push(c.replace(/\n$/, ''));
+    return '\u0000B' + (blocks.length - 1) + '\u0000';
+  });
+  var lines = src.split(/\r?\n/);
+  var html = '';
+  var i = 0;
+  var para = [];
+  var flush = function(){
+    if(para.length){
+      html += '<p>' + para.map(function(l){ return inlineMd(esc(l)); }).join('<br>') + '</p>';
+      para.length = 0;
+    }
+  };
+  while(i < lines.length){
+    var t = lines[i].trim();
+    if(/^\u0000B\d+\u0000$/.test(t)){ flush(); html += t; i++; continue; }
+    if(/^#{1,6}\s/.test(t)){
+      flush();
+      var n = t.match(/^#+/)[0].length;
+      html += '<h' + n + '>' + inlineMd(esc(t.replace(/^#+\s*/, ''))) + '</h' + n + '>';
+      i++; continue;
+    }
+    if(/^(-{3,}|\*{3,}|_{3,})$/.test(t)){ flush(); html += '<hr>'; i++; continue; }
+    if(/^>/.test(t)){
+      flush();
+      var q = [];
+      while(i < lines.length && /^>/.test(lines[i].trim())){
+        q.push(lines[i].trim().replace(/^>\s?/, ''));
+        i++;
+      }
+      html += '<blockquote>' + q.map(function(x){ return inlineMd(esc(x)); }).join('<br>') + '</blockquote>';
+      continue;
+    }
+    if(/^[-*+]\s+/.test(t)){
+      flush();
+      var ul = [];
+      while(i < lines.length && /^[-*+]\s+/.test(lines[i].trim())){
+        ul.push('<li>' + inlineMd(esc(lines[i].trim().replace(/^[-*+]\s+/, ''))) + '</li>');
+        i++;
+      }
+      html += '<ul>' + ul.join('') + '</ul>';
+      continue;
+    }
+    if(/^\d+[.)]\s+/.test(t)){
+      flush();
+      var ol = [];
+      while(i < lines.length && /^\d+[.)]\s+/.test(lines[i].trim())){
+        ol.push('<li>' + inlineMd(esc(lines[i].trim().replace(/^\d+[.)]\s+/, ''))) + '</li>');
+        i++;
+      }
+      html += '<ol>' + ol.join('') + '</ol>';
+      continue;
+    }
+    if(t === ''){ flush(); i++; continue; }
+    para.push(lines[i]);
+    i++;
   }
   flush();
-  return html.replace(/\u0000B(\d+)\u0000/g,(m,n)=>'<pre><code>'+esc(blocks[+n])+'</code></pre>');
-}
-
-let KEY=sessionStorage.getItem('mlk')||'';
-async function api(path,{method='GET',body}={}){
-  const r=await fetch(API+path,{
-    method,
-    headers:{'Content-Type':'application/json','X-Admin-Key':KEY},
-    body:body?JSON.stringify(body):undefined,
+  return html.replace(/\u0000B(\d+)\u0000/g, function(m, n){
+    return '<pre><code>' + esc(blocks[+n]) + '</code></pre>';
   });
-  let j={};try{j=await r.json();}catch(e){}
-  if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
-  return j;
 }
 
-async function uploadFile(file,kind){
-  const fd=new FormData();
-  fd.append('file',file);
-  fd.append('kind',kind);
-  const r=await fetch(API+'/api/upload',{
-    method:'POST',
-    headers:{'X-Admin-Key':KEY},
-    body:fd,
+var KEY = sessionStorage.getItem('mlk') || '';
+
+function api(path, opts){
+  opts = opts || {};
+  var method = opts.method || 'GET';
+  var body = opts.body;
+  return fetch(API + path, {
+    method: method,
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': KEY },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(j){
+      if(!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      return j;
+    });
   });
-  let j={};try{j=await r.json();}catch(e){}
-  if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
-  return j;
 }
 
-async function tryPw(){
-  const v=$('#pw').value.trim();if(!v)return;
-  KEY=v;
-  try{
-    await api('/api/ping');
-    sessionStorage.setItem('mlk',KEY);
-    $('#gate').hidden=true;$('#adminPanel').hidden=false;
-    $('#connNote').textContent='соединение: установлено · ключ подтверждён';
-    $('#pw').value='';$('#pwErr').classList.remove('on');
-    await refreshList();
-  }catch(e){
-    KEY='';
+function uploadFile(file, kind){
+  var fd = new FormData();
+  fd.append('file', file);
+  fd.append('kind', kind);
+  return fetch(API + '/api/upload', {
+    method: 'POST',
+    headers: { 'X-Admin-Key': KEY },
+    body: fd
+  }).then(function(r){
+    return r.json().catch(function(){ return {}; }).then(function(j){
+      if(!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      return j;
+    });
+  });
+}
+
+function tryPw(){
+  var v = $('#pw').value.trim();
+  if(!v) return;
+  KEY = v;
+  api('/api/ping').then(function(){
+    sessionStorage.setItem('mlk', KEY);
+    $('#gate').hidden = true;
+    $('#adminPanel').hidden = false;
+    $('#connNote').textContent = 'соединение: установлено · ключ подтверждён';
+    $('#pw').value = '';
+    $('#pwErr').classList.remove('on');
+    return refreshList();
+  }).catch(function(e){
+    KEY = '';
     $('#pwErr').classList.add('on');
-    toast(e.message,true);
-  }
+    toast(e.message, true);
+  });
 }
-$('#pwGo').onclick=tryPw;
-$('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')tryPw();});
 
-(async()=>{
-  try{
-    await fetch(API+'/api/items');
-    $('#connNote').textContent='API: на связи · '+(KEY?'проверка ключа…':'ключ не введён');
-    if(KEY)tryPw();
-  }catch(e){
-    $('#connNote').textContent='API: нет связи · '+(API||'текущий домен');
-  }
-})();
+document.addEventListener('DOMContentLoaded', function(){
+  $('#pwGo').onclick = tryPw;
+  $('#pw').addEventListener('keydown', function(e){ if(e.key === 'Enter') tryPw(); });
 
-let ITEMS=[];
-async function refreshList(){
-  try{ITEMS=(await api('/api/items')).items||[];}
-  catch(e){toast('ошибка загрузки: '+e.message,true);return;}
-  $('#alist').innerHTML=ITEMS.map(it=>`<div class="arow" data-id="${it.id}">
-    <time>${fmt(it.date)}</time><span class="at">${esc(it.title)}</span>
-    <span><button data-a="edit">правка</button> <button data-a="del" class="red">удалить</button></span>
-  </div>`).join('')||'<p style="padding:18px;color:#666;font-family:JetBrains Mono,monospace;font-size:12px">база пуста</p>';
-}
-$('#alist').addEventListener('click',async e=>{
-  const b=e.target.closest('[data-a]');if(!b)return;
-  const id=b.closest('.arow').dataset.id;
-  const it=ITEMS.find(x=>x.id===id);if(!it)return;
-  if(b.dataset.a==='edit'){
-    editing=id;
-    $('#fTitle').value=it.title;$('#fDate').value=it.date;$('#fBrief').value=it.brief||'';$('#fBody').value=it.body||'';
-    coverData=it.cover||'';
-    $('#coverUrl').value=/^https?:\/\//i.test(coverData)?coverData:'';
-    renderCoverThumb();
-    atts=(it.atts||[]).map(a=>({...a}));renderAtts();
-    $('#editMark').textContent='правка: '+it.title;
-    $('#saveBtn').textContent='обновить';
-  }else{
-    if(!confirm(`удалить «${it.title}»?`))return;
-    try{await api('/api/items/'+id,{method:'DELETE'});toast('удалено');await refreshList();if(editing===id)resetForm();}
-    catch(err){toast(err.message,true);}
-  }
+  fetch(API + '/api/items').then(function(){
+    $('#connNote').textContent = 'API: на связи · ' + (KEY ? 'проверка ключа…' : 'ключ не введён');
+    if(KEY) tryPw();
+  }).catch(function(){
+    $('#connNote').textContent = 'API: нет связи · ' + (API || 'текущий домен');
+  });
 });
+</script>
+<script>
+var ITEMS = [];
 
-let editing=null,coverData='',atts=[];
-$('#fDate').value=today();
+function refreshList(){
+  return api('/api/items').then(function(j){
+    ITEMS = j.items || [];
+    var html = ITEMS.map(function(it){
+      return '<div class="arow" data-id="' + it.id + '">' +
+        '<time>' + fmt(it.date) + '</time>' +
+        '<span class="at">' + esc(it.title) + '</span>' +
+        '<span><button data-a="edit">правка</button> <button data-a="del" class="red">удалить</button></span>' +
+      '</div>';
+    }).join('');
+    if(!html) html = '<p style="padding:18px;color:#666;font-family:JetBrains Mono,monospace;font-size:12px">база пуста</p>';
+    $('#alist').innerHTML = html;
+  }).catch(function(e){
+    toast('ошибка загрузки: ' + e.message, true);
+  });
+}
+
+var editing = null, coverData = '', atts = [];
 
 function resetForm(){
-  editing=null;coverData='';atts=[];
-  $('#aform').reset();$('#fDate').value=today();
-  $('#coverUrl').value='';
-  $('#thumb').hidden=true;renderAtts();
-  $('#editMark').textContent='новая запись';
-  $('#saveBtn').textContent='сохранить';
-  $('#prev').hidden=true;
+  editing = null; coverData = ''; atts = [];
+  $('#aform').reset();
+  $('#fDate').value = today();
+  $('#coverUrl').value = '';
+  $('#thumb').hidden = true;
+  renderAtts();
+  $('#editMark').textContent = 'новая запись';
+  $('#saveBtn').textContent = 'сохранить';
+  $('#prev').hidden = true;
 }
-function renderCoverThumb(){
-  if(coverData){$('#thumbImg').src=absUrl(coverData);$('#thumb').hidden=false;}else $('#thumb').hidden=true;
-}
-$('#thumbDel').onclick=()=>{coverData='';$('#coverUrl').value='';renderCoverThumb();};
 
-/* ---------- прямая ссылка на обложку ---------- */
-$('#coverUrlGo').onclick=()=>{
-  const v=$('#coverUrl').value.trim();
-  if(!v){toast('вставь ссылку',true);return;}
-  if(!/^https?:\/\//i.test(v) && !v.startsWith('/')){
-    toast('ссылка должна начинаться с http(s):// или /',true);
-    return;
-  }
-  coverData=v;
-  renderCoverThumb();
-  toast('ссылка применена');
-};
-$('#coverUrl').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){e.preventDefault();$('#coverUrlGo').click();}
-});
+function renderCoverThumb(){
+  if(coverData){ $('#thumbImg').src = absUrl(coverData); $('#thumb').hidden = false; }
+  else { $('#thumb').hidden = true; }
+}
 
 function renderAtts(){
-  $('#atts').innerHTML=atts.map((a,i)=>{
-    const href=a.url?absUrl(a.url):(a.data||'#');
-    const label=a.url?`<a href="${esc(href)}" target="_blank" rel="noopener">${esc(a.name)}</a>`:esc(a.name);
-    return `<span class="achip">${label} <small style="color:#777">${fmtSize(a.size||0)}</small><b data-i="${i}">✕</b></span>`;
-  }).join('');
-}
-$('#atts').addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(!b)return;atts.splice(+b.dataset.i,1);renderAtts();});
-
-/* ---------- обложка (файл) ---------- */
-$('#coverFile').addEventListener('change',async e=>{
-  const f=e.target.files[0];e.target.value='';if(!f)return;
-  if(f.size>5e6){toast('изображение больше 5 МБ',true);return;}
-  try{
-    toast('загрузка…');
-    const r=await uploadFile(f,'cover');
-    coverData=r.url;
-    $('#coverUrl').value='';
-    renderCoverThumb();
-    toast('обложка загружена');
-  }catch(err){toast(err.message,true);}
-});
-
-/* ---------- вложения ---------- */
-$('#attFile').addEventListener('change',async e=>{
-  const files=[...e.target.files];e.target.value='';
-  for(const f of files){
-    if(atts.length>=5){toast('максимум 5 вложений',true);break;}
-    if(f.size>5e6){toast(`«${f.name}» больше 5 МБ`,true);continue;}
-    try{
-      toast('загрузка '+f.name+'…');
-      const r=await uploadFile(f,'att');
-      atts.push({name:r.name||f.name,type:r.type||f.type||'application/octet-stream',url:r.url,size:r.size||f.size});
-      renderAtts();
-    }catch(err){toast(err.message,true);}
+  var html = '';
+  for(var i = 0; i < atts.length; i++){
+    var a = atts[i];
+    var href = a.url ? absUrl(a.url) : (a.data || '#');
+    var label;
+    if(a.url){
+      label = '<a href="' + esc(href) + '" target="_blank" rel="noopener">' + esc(a.name) + '</a>';
+    } else {
+      label = esc(a.name);
+    }
+    var size = fmtSize(a.size || 0);
+    html += '<span class="achip">' + label + ' <small style="color:#777">' + size + '</small><b data-i="' + i + '">x</b></span>';
   }
-});
+  $('#atts').innerHTML = html;
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
 
-/* ---------- фото в текст ---------- */
-$('#bodyImgFile').addEventListener('change',async e=>{
-  const f=e.target.files[0];e.target.value='';if(!f)return;
-  if(f.size>5e6){toast('изображение больше 5 МБ',true);return;}
-  try{
-    toast('загрузка фото…');
-    const r=await uploadFile(f,'att');
-    const url=absUrl(r.url);
-    const md=`![${f.name.replace(/[\[\]]/g,'')}](${url})`;
-    const ta=$('#fBody');
-    const start=ta.selectionStart||0, end=ta.selectionEnd||0;
-    ta.value=ta.value.slice(0,start)+md+ta.value.slice(end);
-    ta.selectionStart=ta.selectionEnd=start+md.length;
-    ta.focus();
-    toast('фото вставлено в текст');
-  }catch(err){toast(err.message,true);}
-});
+  $('#fDate').value = today();
 
-/* ---------- сохранение ---------- */
-$('#aform').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const title=$('#fTitle').value.trim();
-  if(!title){toast('нужен заголовок',true);$('#fTitle').focus();return;}
-  const item={title,date:$('#fDate').value||today(),brief:$('#fBrief').value.trim(),body:$('#fBody').value,cover:coverData,atts};
-  const wasEdit=!!editing;
-  const btn=$('#saveBtn');btn.disabled=true;btn.textContent='отправка…';
-  try{
-    if(wasEdit)await api('/api/items/'+editing,{method:'PUT',body:item});
-    else await api('/api/items',{method:'POST',body:item});
-    toast(wasEdit?'обновлено':'добавлено');
-    resetForm();await refreshList();
-  }catch(err){toast(err.message,true);}
-  btn.disabled=false;btn.textContent=wasEdit?'обновить':'сохранить';
-});
-$('#clearBtn').onclick=resetForm;
+  $('#alist').addEventListener('click', function(e){
+    var b = e.target.closest('[data-a]');
+    if(!b) return;
+    var id = b.closest('.arow').dataset.id;
+    var it = ITEMS.filter(function(x){ return x.id === id; })[0];
+    if(!it) return;
+    if(b.dataset.a === 'edit'){
+      editing = id;
+      $('#fTitle').value = it.title;
+      $('#fDate').value = it.date;
+      $('#fBrief').value = it.brief || '';
+      $('#fBody').value = it.body || '';
+      coverData = it.cover || '';
+      $('#coverUrl').value = /^https?:\/\//i.test(coverData) ? coverData : '';
+      renderCoverThumb();
+      atts = (it.atts || []).map(function(a){ return Object.assign({}, a); });
+      renderAtts();
+      $('#editMark').textContent = 'правка: ' + it.title;
+      $('#saveBtn').textContent = 'обновить';
+    } else {
+      if(!confirm('удалить «' + it.title + '»?')) return;
+      api('/api/items/' + id, { method: 'DELETE' }).then(function(){
+        toast('удалено');
+        return refreshList();
+      }).then(function(){
+        if(editing === id) resetForm();
+      }).catch(function(err){ toast(err.message, true); });
+    }
+  });
 
-$('#prevBtn').onclick=()=>{
-  const p=$('#prev');p.hidden=!p.hidden;
-  if(!p.hidden)$('#prevBody').innerHTML=renderMD($('#fBody').value)||'<p style="color:#666">пусто</p>';
-};
-$('#fBody').addEventListener('input',()=>{if(!$('#prev').hidden)$('#prevBody').innerHTML=renderMD($('#fBody').value);});
+  $('#thumbDel').onclick = function(){ coverData = ''; $('#coverUrl').value = ''; renderCoverThumb(); };
 
-$('#expBtn').onclick=async()=>{
-  try{
-    const j=await api('/api/items');
-    const b=new Blob([JSON.stringify(j.items,null,1)],{type:'application/json'});
-    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='megalul.json';a.click();
-    toast('экспортировано');
-  }catch(e){toast(e.message,true);}
-};
-$('#impBtn').onclick=()=>$('#impFile').click();
-$('#impFile').addEventListener('change',e=>{
-  const f=e.target.files[0];e.target.value='';if(!f)return;
-  const r=new FileReader();
-  r.onload=async()=>{
-    let arr;
-    try{arr=JSON.parse(r.result);if(!Array.isArray(arr))throw 0;}
-    catch(err){toast('битый json',true);return;}
-    if(!confirm(`импортировать ${arr.length} записей? текущая база будет полностью заменена.`))return;
-    try{
-      const res=await api('/api/import',{method:'POST',body:arr});
-      toast(`импортировано: ${res.imported}${res.skipped?', пропущено: '+res.skipped:''}`);
-      await refreshList();resetForm();
-    }catch(err){toast(err.message,true);}
+  $('#coverUrlGo').onclick = function(){
+    var v = $('#coverUrl').value.trim();
+    if(!v){ toast('вставь ссылку', true); return; }
+    if(!/^https?:\/\//i.test(v) && v.charAt(0) !== '/'){
+      toast('ссылка должна начинаться с http(s):// или /', true);
+      return;
+    }
+    coverData = v;
+    renderCoverThumb();
+    toast('ссылка применена');
   };
-  r.readAsText(f);
+
+  $('#coverUrl').addEventListener('keydown', function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); $('#coverUrlGo').click(); }
+  });
+
+  $('#atts').addEventListener('click', function(e){
+    var b = e.target.closest('[data-i]');
+    if(!b) return;
+    atts.splice(+b.dataset.i, 1);
+    renderAtts();
+  });
+
+  $('#coverFile').addEventListener('change', function(e){
+    var f = e.target.files[0];
+    e.target.value = '';
+    if(!f) return;
+    if(f.size > 5e6){ toast('изображение больше 5 МБ', true); return; }
+    toast('загрузка…');
+    uploadFile(f, 'cover').then(function(r){
+      coverData = r.url;
+      $('#coverUrl').value = '';
+      renderCoverThumb();
+      toast('обложка загружена');
+    }).catch(function(err){ toast(err.message, true); });
+  });
+
+  $('#attFile').addEventListener('change', function(e){
+    var files = Array.prototype.slice.call(e.target.files);
+    e.target.value = '';
+    var chain = Promise.resolve();
+    files.forEach(function(f){
+      chain = chain.then(function(){
+        if(atts.length >= 5){ toast('максимум 5 вложений', true); return; }
+        if(f.size > 5e6){ toast('«' + f.name + '» больше 5 МБ', true); return; }
+        toast('загрузка ' + f.name + '…');
+        return uploadFile(f, 'att').then(function(r){
+          atts.push({ name: r.name || f.name, type: r.type || f.type || 'application/octet-stream', url: r.url, size: r.size || f.size });
+          renderAtts();
+        }).catch(function(err){ toast(err.message, true); });
+      });
+    });
+  });
+
+  $('#bodyImgFile').addEventListener('change', function(e){
+    var f = e.target.files[0];
+    e.target.value = '';
+    if(!f) return;
+    if(f.size > 5e6){ toast('изображение больше 5 МБ', true); return; }
+    toast('загрузка фото…');
+    uploadFile(f, 'att').then(function(r){
+      var url = absUrl(r.url);
+      var md = '![' + f.name.replace(/[\[\]]/g, '') + '](' + url + ')';
+      var ta = $('#fBody');
+      var start = ta.selectionStart || 0;
+      var end = ta.selectionEnd || 0;
+      ta.value = ta.value.slice(0, start) + md + ta.value.slice(end);
+      ta.selectionStart = ta.selectionEnd = start + md.length;
+      ta.focus();
+      toast('фото вставлено в текст');
+    }).catch(function(err){ toast(err.message, true); });
+  });
+
+  $('#aform').addEventListener('submit', function(e){
+    e.preventDefault();
+    var title = $('#fTitle').value.trim();
+    if(!title){ toast('нужен заголовок', true); $('#fTitle').focus(); return; }
+    var item = { title: title, date: $('#fDate').value || today(), brief: $('#fBrief').value.trim(), body: $('#fBody').value, cover: coverData, atts: atts };
+    var wasEdit = !!editing;
+    var btn = $('#saveBtn');
+    btn.disabled = true;
+    btn.textContent = 'отправка…';
+    var p = wasEdit ? api('/api/items/' + editing, { method: 'PUT', body: item }) : api('/api/items', { method: 'POST', body: item });
+    p.then(function(){
+      toast(wasEdit ? 'обновлено' : 'добавлено');
+      resetForm();
+      return refreshList();
+    }).catch(function(err){ toast(err.message, true); }).then(function(){
+      btn.disabled = false;
+      btn.textContent = wasEdit ? 'обновить' : 'сохранить';
+    });
+  });
+
+  $('#clearBtn').onclick = resetForm;
+
+  $('#prevBtn').onclick = function(){
+    var p = $('#prev');
+    p.hidden = !p.hidden;
+    if(!p.hidden) $('#prevBody').innerHTML = renderMD($('#fBody').value) || '<p style="color:#666">пусто</p>';
+  };
+
+  $('#fBody').addEventListener('input', function(){
+    if(!$('#prev').hidden) $('#prevBody').innerHTML = renderMD($('#fBody').value);
+  });
+
+  $('#expBtn').onclick = function(){
+    api('/api/items').then(function(j){
+      var b = new Blob([JSON.stringify(j.items, null, 1)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'megalul.json';
+      a.click();
+      toast('экспортировано');
+    }).catch(function(e){ toast(e.message, true); });
+  };
+
+  $('#impBtn').onclick = function(){ $('#impFile').click(); };
+
+  $('#impFile').addEventListener('change', function(e){
+    var f = e.target.files[0];
+    e.target.value = '';
+    if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      var arr;
+      try {
+        arr = JSON.parse(r.result);
+        if(!Array.isArray(arr)) throw 0;
+      } catch(err){ toast('битый json', true); return; }
+      if(!confirm('импортировать ' + arr.length + ' записей? текущая база будет полностью заменена.')) return;
+      api('/api/import', { method: 'POST', body: arr }).then(function(res){
+        toast('импортировано: ' + res.imported + (res.skipped ? ', пропущено: ' + res.skipped : ''));
+        return refreshList();
+      }).then(function(){ resetForm(); }).catch(function(err){ toast(err.message, true); });
+    };
+    r.readAsText(f);
+  });
+
 });
 </script>
 </body>
