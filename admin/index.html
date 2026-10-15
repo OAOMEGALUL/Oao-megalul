@@ -50,6 +50,8 @@ textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospa
 .thumb button{position:absolute;top:8px;right:8px;background:#000;border:1px solid #333;color:#fff;padding:4px 10px;font-size:11px;font-family:"JetBrains Mono",ui-monospace,monospace;cursor:pointer}
 .atts{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
 .achip{display:inline-flex;gap:10px;align-items:center;border:1px solid #222;padding:6px 12px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px}
+.achip a{color:#fff;border-bottom:none}
+.achip a:hover{color:#ddd}
 .achip b{cursor:pointer;color:#888;font-weight:400}
 .achip b:hover{color:#ff6b6b}
 .formbtns{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
@@ -131,6 +133,9 @@ textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospa
         <div class="field">
           <label>Полное описание · markdown</label>
           <textarea id="fBody" rows="10" placeholder="## заголовок&#10;текст, **жирный**, `код`&#10;- списки&#10;> цитаты&#10;```&#10;блоки кода&#10;```"></textarea>
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+            <label class="filebtn"><input type="file" id="bodyImgFile" accept="image/*">загрузить фото в текст</label>
+          </div>
           <p class="hint"># ## ### · **жирный** · *курсив* · ~~зачёркнутый~~ · `код` · ```блоки``` · - списки · 1. нумерация · > цитаты · [ссылки](…)</p>
         </div>
         <div class="frow">
@@ -140,7 +145,7 @@ textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospa
             <div class="thumb" id="thumb" hidden><img id="thumbImg" alt=""><button type="button" id="thumbDel">убрать</button></div>
           </div>
           <div class="field">
-            <label>Вложения (до 5, по 900 КБ)</label>
+            <label>Вложения (до 5, по 5 МБ)</label>
             <label class="filebtn"><input type="file" id="attFile" multiple>добавить</label>
             <div class="atts" id="atts"></div>
           </div>
@@ -160,7 +165,7 @@ textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospa
           <button id="impBtn">импорт json</button>
           <input type="file" id="impFile" accept="application/json" hidden>
         </div>
-        <p class="anote">база: Cloudflare KV. каждая запись — отдельный ключ.<br>импорт полностью заменяет базу. лимит записи ≈ 22 МБ.</p>
+        <p class="anote">файлы хранятся на node.js-сервере в /uploads.<br>импорт полностью заменяет базу.</p>
       </div>
     </div>
   </div>
@@ -169,12 +174,13 @@ textarea{resize:vertical;line-height:1.6;font-family:"JetBrains Mono",ui-monospa
 <div id="toast"></div>
 
 <script>
-const API='https://fragrant-glade-be7f.rexetstios.workers.dev';
+const API='https://work.danyadanya4646.workers.dev';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const fmt=d=>{if(!d)return'—';const p=d.split('-');return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:d};
 const fmtSize=b=>b<1024?b+' Б':b<1048576?(b/1024).toFixed(0)+' КБ':(b/1048576).toFixed(1)+' МБ';
 const today=()=>new Date().toISOString().slice(0,10);
+const absUrl=u=>!u?'':(/^https?:\/\//i.test(u)?u:API+u);
 
 let tt;
 function toast(msg,bad){const t=$('#toast');t.textContent='» '+msg;t.classList.toggle('bad',!!bad);t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400);}
@@ -216,6 +222,20 @@ async function api(path,{method='GET',body}={}){
     method,
     headers:{'Content-Type':'application/json','X-Admin-Key':KEY},
     body:body?JSON.stringify(body):undefined,
+  });
+  let j={};try{j=await r.json();}catch(e){}
+  if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
+  return j;
+}
+
+async function uploadFile(file,kind){
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('kind',kind);
+  const r=await fetch(API+'/api/upload',{
+    method:'POST',
+    headers:{'X-Admin-Key':KEY},
+    body:fd,
   });
   let j={};try{j=await r.json();}catch(e){}
   if(!r.ok)throw new Error(j.error||('HTTP '+r.status));
@@ -289,36 +309,64 @@ function resetForm(){
   $('#prev').hidden=true;
 }
 function renderCoverThumb(){
-  if(coverData){$('#thumbImg').src=coverData;$('#thumb').hidden=false;}else $('#thumb').hidden=true;
+  if(coverData){$('#thumbImg').src=absUrl(coverData);$('#thumb').hidden=false;}else $('#thumb').hidden=true;
 }
 $('#thumbDel').onclick=()=>{coverData='';renderCoverThumb();};
 function renderAtts(){
-  $('#atts').innerHTML=atts.map((a,i)=>`<span class="achip">${esc(a.name)} <small style="color:#777">${fmtSize(a.size||0)}</small><b data-i="${i}">✕</b></span>`).join('');
+  $('#atts').innerHTML=atts.map((a,i)=>{
+    const href=a.url?absUrl(a.url):(a.data||'#');
+    const label=a.url?`<a href="${esc(href)}" target="_blank" rel="noopener">${esc(a.name)}</a>`:esc(a.name);
+    return `<span class="achip">${label} <small style="color:#777">${fmtSize(a.size||0)}</small><b data-i="${i}">✕</b></span>`;
+  }).join('');
 }
 $('#atts').addEventListener('click',e=>{const b=e.target.closest('[data-i]');if(!b)return;atts.splice(+b.dataset.i,1);renderAtts();});
 
-function downscale(file,maxW,cb){
-  const img=new Image(),url=URL.createObjectURL(file);
-  img.onload=()=>{const c=document.createElement('canvas');const k=Math.min(1,maxW/img.width);c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.82));URL.revokeObjectURL(url);};
-  img.onerror=()=>{URL.revokeObjectURL(url);toast('не удалось прочитать файл',true);};
-  img.src=url;
-}
-$('#coverFile').addEventListener('change',e=>{
+/* ---------- обложка ---------- */
+$('#coverFile').addEventListener('change',async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
-  if(f.size>3e6){toast('изображение больше 3 МБ',true);return;}
-  downscale(f,1000,d=>{coverData=d;renderCoverThumb();});
-});
-$('#attFile').addEventListener('change',e=>{
-  for(const f of e.target.files){
-    if(atts.length>=5){toast('максимум 5 вложений',true);break;}
-    if(f.size>921600){toast(`«${f.name}» больше 900 КБ`,true);continue;}
-    const r=new FileReader();
-    r.onload=()=>{atts.push({name:f.name,type:f.type||'application/octet-stream',data:r.result,size:f.size});renderAtts();};
-    r.readAsDataURL(f);
-  }
-  e.target.value='';
+  if(f.size>5e6){toast('изображение больше 5 МБ',true);return;}
+  try{
+    toast('загрузка…');
+    const r=await uploadFile(f,'cover');
+    coverData=r.url;renderCoverThumb();
+    toast('обложка загружена');
+  }catch(err){toast(err.message,true);}
 });
 
+/* ---------- вложения ---------- */
+$('#attFile').addEventListener('change',async e=>{
+  const files=[...e.target.files];e.target.value='';
+  for(const f of files){
+    if(atts.length>=5){toast('максимум 5 вложений',true);break;}
+    if(f.size>5e6){toast(`«${f.name}» больше 5 МБ`,true);continue;}
+    try{
+      toast('загрузка '+f.name+'…');
+      const r=await uploadFile(f,'att');
+      atts.push({name:r.name||f.name,type:r.type||f.type||'application/octet-stream',url:r.url,size:r.size||f.size});
+      renderAtts();
+    }catch(err){toast(err.message,true);}
+  }
+});
+
+/* ---------- фото в текст ---------- */
+$('#bodyImgFile').addEventListener('change',async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  if(f.size>5e6){toast('изображение больше 5 МБ',true);return;}
+  try{
+    toast('загрузка фото…');
+    const r=await uploadFile(f,'att');
+    const url=absUrl(r.url);
+    const md=`![${f.name.replace(/[\[\]]/g,'')}](${url})`;
+    const ta=$('#fBody');
+    const start=ta.selectionStart||0, end=ta.selectionEnd||0;
+    ta.value=ta.value.slice(0,start)+md+ta.value.slice(end);
+    ta.selectionStart=ta.selectionEnd=start+md.length;
+    ta.focus();
+    toast('фото вставлено в текст');
+  }catch(err){toast(err.message,true);}
+});
+
+/* ---------- сохранение ---------- */
 $('#aform').addEventListener('submit',async e=>{
   e.preventDefault();
   const title=$('#fTitle').value.trim();
